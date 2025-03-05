@@ -1,12 +1,17 @@
-import { Button } from "@workspace/ui/components/button"
-
+import { ChatInput } from "@graphy/chatter/src/components/ChatInput";
+import {MessageBubble} from "@graphy/chatter/src/components/MessageBubble";
 export default function Page() {
+  const messageExample = {
+    content : "hello world lorem ipsum dolor sit amet",
+    type : "text"  as const
+  }
   return (
-    <div className="flex items-center justify-center min-h-svh">
-      <div className="flex flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold">Hello World</h1>
-        <Button size="sm">Button</Button>
+    <div className="h-full">
+      <ChatInput />
+
+      <div className="px-8">
+        <MessageBubble message={messageExample}  />
       </div>
     </div>
-  )
+  );
 }
