@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { cn } from "@workspace/ui/lib/utils";
 import { AlertCircle, Copy, Check } from "lucide-react";
-import useSound from "use-sound";
+import { useSound } from "use-sound";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -19,6 +19,11 @@ interface IMessageBubble {
   gradient?: string;
   onRetry?: () => void;
   soundUrl?: string;
+}
+
+// Define custom props for the code component
+interface CodeProps extends React.HTMLAttributes<HTMLElement> {
+  inline?: boolean;
 }
 
 export function MessageBubble({
@@ -68,43 +73,41 @@ export function MessageBubble({
         <div className={cn("relative px-4 py-2 text-white shadow-sm", backgroundStyle, bubbleRadius)}>
           {message.type === "text" && (
             <ReactMarkdown
-            components={{
-              code({ inline, className, children, ...props }) {
-                const match = /language-(\w+)/.exec(className || '');
-                const code = String(children).replace(/\n$/, '');
-          
-                return !inline ? (
-                  <div className="relative">
-                    <SyntaxHighlighter
-                      style={vscDarkPlus}
-                      language={match?.[1] || 'text'}
-                      PreTag="div"
-                      {...props} // Ensure props are properly passed
-                    >
-                      {code}
-                    </SyntaxHighlighter>
-                    <button
-                      onClick={() => handleCopyCode(code)}
-                      className="absolute top-2 right-2 p-1 rounded bg-gray-800 hover:bg-gray-700"
-                    >
-                      {copiedCode === code ? (
-                        <Check size={14} className="text-green-400" />
-                      ) : (
-                        <Copy size={14} className="text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                ) : (
-                  <code className="bg-gray-800 rounded px-1">
-                    {children}
-                  </code>
-                );
-              },
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
-          
+              components={{
+                code: ({ inline, className, children }: CodeProps) => {
+                  const match = /language-(\w+)/.exec(className || '');
+                  const code = String(children).replace(/\n$/, '');
+
+                  return !inline ? (
+                    <div className="relative">
+                      <SyntaxHighlighter
+                        style={vscDarkPlus}
+                        language={match?.[1] || 'text'}
+                        PreTag="div"
+                      >
+                        {code}
+                      </SyntaxHighlighter>
+                      <button
+                        onClick={() => handleCopyCode(code)}
+                        className="absolute top-2 right-2 p-1 rounded bg-gray-800 hover:bg-gray-700"
+                      >
+                        {copiedCode.has(code) ? (
+                          <Check size={14} className="text-green-400" />
+                        ) : (
+                          <Copy size={14} className="text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <code className="bg-gray-800 rounded px-1">
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
           )}
           {message.type === "image" && <img src={message.content} alt="Sent image" className="rounded-lg max-w-full" />}
           {message.type === "video" && (

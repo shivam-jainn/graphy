@@ -3,7 +3,7 @@ import {MessageBubble} from "@graphy/chatter/src/components/MessageBubble";
 export default function Page() {
   const messageExample = {
     content : "hello world lorem ipsum dolor sit amet",
-    type : "text"
+    type : "text"  as const
   }
   return (
     <div className="h-full">
