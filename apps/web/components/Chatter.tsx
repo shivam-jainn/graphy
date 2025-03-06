@@ -1,34 +1,42 @@
 "use client";
 
-import { useChat } from './chat-context';
+import { useChat } from '@ai-sdk/react';
 import { ChatInput } from './ChatInput';
 import { MessageBubble } from './MessageBubble';
 
 export default function Chatter() {
-  const { messages } = useChat();
+  const { messages, input, handleInputChange, handleSubmit } = useChat({
+    api: '/api/chat',
+    initialMessages: [
+      {
+        id: '1',
+        role: 'assistant',
+        content: "Hey, I am Graphy! What can I do for you?"
+      }
+    ]
+  });
 
   return (
-    <div className="flex flex-col h-screen w-full relative">
-      
-      {/* Input fixed at the bottom */}
-      <div className="absolute left-0 bottom-0 w-full p-4 bg-transparent">
-        <ChatInput />
-      </div>
-
-      {/* Messages take the full available space above input */}
+    <div className="flex flex-col h-screen w-full">
       <div className="flex-1 overflow-y-auto h-screen space-y-4 p-4 pb-20">
         {messages.map((message) => (
           <MessageBubble
             key={message.id}
             message={{
-              content: message.content,
-              type: message.type
+              content: message.content
             }}
-            isSender={message.sender === 'user'}
+            isSender={message.role === 'user'}
           />
         ))}
       </div>
       
+      <div className="w-full p-4 bg-transparent">
+        <ChatInput 
+          input={input}
+          handleInputChange={handleInputChange}
+          handleSubmit={handleSubmit}
+        />
+      </div>
     </div>
   );
 }

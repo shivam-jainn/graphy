@@ -4,24 +4,27 @@ import { Input } from "@workspace/ui/components/input";
 import { Button } from "@workspace/ui/components/button";
 import { Badge } from "@workspace/ui/components/badge";
 import { Paperclip, FileText, ImageIcon, FileVideo, FileAudio, Search, MessageCircle, Send } from "lucide-react";
-import { useChat } from "./chat-context";
 
-const allowedExtensions = [".pdf", ".docx", ".png", ".jpg", ".mp4", ".mov", ".mp3", ".wav"];
+const allowedExtensions = [".pdf", ".docx"];
 
-export function ChatInput() {
-  // Add ref for dropdown
+interface ChatInputProps {
+  input: string;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+}
+
+export function ChatInput({ input, handleInputChange, handleSubmit }: ChatInputProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [inputValue, setInputValue] = useState("");
   const [showAttachDropdown, setShowAttachDropdown] = useState(false);
   const [activeFeatures, setActiveFeatures] = useState<Record<string, boolean>>({
     search: false,
     reason: false
   });
-  const { addMessage } = useChat();
 
-
+  // Remove duplicate useChat hook since we're getting these as props
+  
   const featButtons = [
     { key: 'search', icon: Search, label: 'Search' },
     { key: 'reason', icon: MessageCircle, label: 'Reason' }
@@ -67,15 +70,15 @@ export function ChatInput() {
     }
   };
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
-    addMessage(inputValue);
-    setInputValue('');  // Clear input after sending
-  };
+ 
 
   return (
-    <div 
-      className="flex flex-col gap-3 w-full p-4 bg-white rounded-xl shadow-sm border"
+    <form 
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit(e);
+      }}
+      className="flex flex-col gap-3 w-full p-4 bg-white rounded-xl shadow-sm "
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -89,8 +92,8 @@ export function ChatInput() {
     >
       {/* Message Box - update to remove individual drop handlers */}
       <Input 
-  value={inputValue}
-  onChange={(e) => setInputValue(e.target.value)}
+  value={input}
+  onChange={handleInputChange}
   className="w-full bg-transparent border-none outline-none resize-none text-left align-top shadow-none focus:ring-0 focus:outline-none focus:border-none hover:border-none"
   placeholder="Type your message..."
 />
@@ -166,11 +169,11 @@ export function ChatInput() {
           ))}
         </div>
 
-        {/* Send Button */}
+        {/* Update Send Button */}
         <Button
+          type="submit"
           variant="default" 
           className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10"
-          onClick={handleSend}  // Changed from addMessage(inputValue) to handleSend
         >
           <Send className="w-5 h-5" />
         </Button>
@@ -190,6 +193,6 @@ export function ChatInput() {
           </div>
         </div>
       )}
-    </div>
+    </form>
   );
 }
