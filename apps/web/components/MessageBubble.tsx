@@ -9,7 +9,6 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export interface IMessageBubbleMessage {
   content: string;
-  type: "text" | "image" | "video" | "audio";
 }
 
 interface IMessageBubble {
@@ -68,62 +67,48 @@ export function MessageBubble({
   const bubbleRadius = isSender ? "rounded-2xl rounded-tr-md" : "rounded-2xl rounded-tl-md";
 
   return (
-    <div className={`flex ${alignment} mb-2`}>
+    <div className={`flex ${alignment} mb-2 px-4`}>
       <div className="flex items-end max-w-xs md:max-w-md">
         {isLoading && <div className="animate-pulse text-gray-400 mr-2">...</div>}
 
         <div className={cn("relative px-4 py-2 text-white shadow-sm", backgroundStyle, bubbleRadius)}>
-          {message.type === "text" && (
-            <ReactMarkdown
-              components={{
-                code: ({ inline, className, children }: CodeProps) => {
-                  const match = /language-(\w+)/.exec(className || '');
-                  const code = String(children).replace(/\n$/, '');
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <span className="block">{children}</span>,
+              code: ({ inline, className, children }: CodeProps) => {
+                const match = /language-(\w+)/.exec(className || '');
+                const code = String(children).replace(/\n$/, '');
 
-                  return !inline ? (
-                    <div className="relative">
-                      <SyntaxHighlighter
-                        style={vscDarkPlus}
-                        language={match?.[1] || 'text'}
-                        PreTag="div"
-                      >
-                        {code}
-                      </SyntaxHighlighter>
-                      <button
-                        onClick={() => handleCopyCode(code)}
-                        className="absolute top-2 right-2 p-1 rounded bg-gray-800 hover:bg-gray-700"
-                      >
-                        {copiedCode.has(code) ? (
-                          <Check size={14} className="text-green-400" />
-                        ) : (
-                          <Copy size={14} className="text-gray-400" />
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <code className="bg-gray-800 rounded px-1">
-                      {children}
-                    </code>
-                  );
-                },
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
-          )}
-          {message.type === "image" && <img src={message.content} alt="Sent image" className="rounded-lg max-w-full" />}
-          {message.type === "video" && (
-            <video controls className="rounded-lg max-w-full">
-              <source src={message.content} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          )}
-          {message.type === "audio" && (
-            <audio controls className="max-w-full">
-              <source src={message.content} type="audio/mpeg" />
-              Your browser does not support the audio element.
-            </audio>
-          )}
+                return !inline ? (
+                  <span className="block relative">
+                    <SyntaxHighlighter
+                      style={vscDarkPlus}
+                      language={match?.[1] || 'text'}
+                      PreTag="div"
+                    >
+                      {code}
+                    </SyntaxHighlighter>
+                    <button
+                      onClick={() => handleCopyCode(code)}
+                      className="absolute top-2 right-2 p-1 rounded bg-gray-800 hover:bg-gray-700"
+                    >
+                      {copiedCode.has(code) ? (
+                        <Check size={14} className="text-green-400" />
+                      ) : (
+                        <Copy size={14} className="text-gray-400" />
+                      )}
+                    </button>
+                  </span>
+                ) : (
+                  <code className="bg-gray-800 rounded px-1">
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
         </div>
 
         {isError && (
