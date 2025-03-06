@@ -1,0 +1,10 @@
+pip>=23.0.0
+setuptools>=65.0.0
+wheel
+scipy
+pandas
+scikit-learn
+matplotlib
+seaborn
+openpyxl
+lxml
