@@ -4,6 +4,7 @@ import { Input } from "@workspace/ui/components/input";
 import { Button } from "@workspace/ui/components/button";
 import { Badge } from "@workspace/ui/components/badge";
 import { Paperclip, FileText, ImageIcon, FileVideo, FileAudio, Search, MessageCircle, Send } from "lucide-react";
+import { useChat } from "./chat-context";
 
 const allowedExtensions = [".pdf", ".docx", ".png", ".jpg", ".mp4", ".mov", ".mp3", ".wav"];
 
@@ -18,6 +19,8 @@ export function ChatInput() {
     search: false,
     reason: false
   });
+  const { addMessage } = useChat();
+
 
   const featButtons = [
     { key: 'search', icon: Search, label: 'Search' },
@@ -62,6 +65,12 @@ export function ChatInput() {
     if (e.dataTransfer.files) {
       handleFileUpload(e.dataTransfer.files);
     }
+  };
+
+  const handleSend = () => {
+    if (!inputValue.trim()) return;
+    addMessage(inputValue);
+    setInputValue('');  // Clear input after sending
   };
 
   return (
@@ -161,6 +170,7 @@ export function ChatInput() {
         <Button
           variant="default" 
           className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10"
+          onClick={handleSend}  // Changed from addMessage(inputValue) to handleSend
         >
           <Send className="w-5 h-5" />
         </Button>

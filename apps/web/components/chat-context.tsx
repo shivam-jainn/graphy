@@ -10,24 +10,25 @@ interface Message extends IMessageBubbleMessage {
 
 interface ChatContextType {
   messages: Message[];
-  addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  addMessage: (content: string) => void;  // Changed to accept string content
 }
 
 const ChatContext = createContext<ChatContextType>({} as ChatContextType);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([{
-    "id" : "1",
-    "sender" : "bot",
-    "content" : "Hello, how can I help you today?",
-    "type" : "text"
-  }
-  ]);
+    "id": "1",
+    "sender": "bot",
+    "content": "Hello, how can I help you today?",
+    "type": "text"
+  }]);
 
-  const addMessage = (message: Omit<Message, 'id' | 'timestamp'>) => {
+  const addMessage = (content: string) => {  // Updated to handle string content
     const newMessage: Message = {
-      ...message,
       id: Date.now().toString(),
+      sender: 'user',
+      content,
+      type: 'text'
     };
     setMessages(prev => [...prev, newMessage]);
   };
