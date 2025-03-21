@@ -1,20 +1,31 @@
 "use client";
 
-import { useChat } from '@ai-sdk/react';
-import { ChatInput } from './ChatInput';
-import { MessageBubble } from './MessageBubble';
+import { useEffect } from "react";
+import { useChat } from "@ai-sdk/react";
+import { ChatInput } from "./ChatInput";
+import { MessageBubble } from "./MessageBubble";
+import { useAtom } from "jotai";
+import { selectedBoardAtom } from "@/lib/atoms/sidebar-atom";
+import { selectedChatAtom } from "@/lib/atoms/board-atom";
 
 export default function Chatter() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
-    api: '/api/chat',
+  const [selectedBoard] = useAtom(selectedBoardAtom);
+  const [selectedChat] = useAtom(selectedChatAtom);
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     initialMessages: [
       {
-        id: '1',
-        role: 'assistant',
-        content: "Hey, I am Graphy! What can I do for you?"
-      }
+        id: "1",
+        role: "assistant",
+        content: "Hey, I am Graphy! What can I do for you?",
+      },
     ]
   });
+
+  // Debug logs
+  useEffect(() => {
+    console.log("Current messages:", messages);
+  }, [messages]);
 
   return (
     <div className="flex flex-col h-screen w-full">
@@ -23,18 +34,20 @@ export default function Chatter() {
           <MessageBubble
             key={message.id}
             message={{
-              content: message.content
+              content: message.content,
+              role: message.role,
             }}
-            isSender={message.role === 'user'}
+            isSender={message.role === "user"}
           />
         ))}
       </div>
-      
+
       <div className="w-full p-4 bg-transparent">
-        <ChatInput 
+        <ChatInput
           input={input}
           handleInputChange={handleInputChange}
           handleSubmit={handleSubmit}
+          isLoading={isLoading}
         />
       </div>
     </div>
