@@ -119,7 +119,7 @@ export function ChatInput({ input, handleInputChange, handleSubmit, isLoading }:
   return (
     <form 
       onSubmit={handleFormSubmit}
-      className="flex flex-col gap-3 w-full p-4 bg-white rounded-xl shadow-sm "
+      className="flex flex-col gap-3 w-full p-4 bg-white rounded-xl shadow-sm border border-solid border-gray-300 "
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -135,7 +135,7 @@ export function ChatInput({ input, handleInputChange, handleSubmit, isLoading }:
       <Input 
   value={input}
   onChange={handleInputChange}
-  className="w-full bg-transparent border-none outline-none resize-none text-left align-top shadow-none focus:ring-0 focus:outline-none focus:border-none hover:border-none"
+  className="w-full bg-transparent border-none outline-none resize-none text-left align-top shadow-none focus:ring-0 focus:outline-none focus:border-none hover:border-none focus-visible:ring-0 focus-visible:outline-none"
   placeholder="Type your message..."
 />
 
