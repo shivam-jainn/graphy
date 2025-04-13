@@ -4,13 +4,8 @@ import { useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
-import { useAtom } from "jotai";
-import { selectedBoardAtom } from "@/lib/atoms/sidebar-atom";
-import { selectedChatAtom } from "@/lib/atoms/board-atom";
 
 export default function Chatter() {
-  const [selectedBoard] = useAtom(selectedBoardAtom);
-  const [selectedChat] = useAtom(selectedChatAtom);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     initialMessages: [

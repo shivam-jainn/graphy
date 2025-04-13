@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log('Received request body:', JSON.stringify(body, null, 2));
 
-    let { messages, chatId } = body;
+    let { messages, chatId, boardID } = body;
 
     // Ensure messages is an array (fixing the nested structure issue)
     if (messages && typeof messages === 'object' && 'messages' in messages) {
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
           vector: embedding,
           topK: 5,
           includeMetadata: true,
-          filter: { chatId: { $eq: chatId } },
+          filter: { boardID: { $eq: boardID } },
         });
 
         context = queryResponse.matches.length > 0
