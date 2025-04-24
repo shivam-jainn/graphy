@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { selectedBoardAtom } from '@/lib/atoms/board-atom';
+import { selectedBoardAtom, selectedChatAtom } from '@/lib/atoms/board-atom';
 import { useAtom } from 'jotai';
 import { Card, CardHeader, CardTitle, CardContent } from "@workspace/ui/components/card";
 import { Plus } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 
 export default function ChatHistory() {
-  const [selectedBoard] = useAtom(selectedBoardAtom);
   const [chatSessions, setChatSessions] = useState<any[]>([]);
-
+  const [selectedBoard, setSelectedBoard] = useAtom(selectedBoardAtom);
+  const [selectedChat,setSelectedChat] = useAtom(selectedChatAtom);
+  
+  console.log(selectedBoard)
   useEffect(() => {
     if (selectedBoard) {
       fetch(`/api/chats?boardId=${selectedBoard}`)
@@ -26,10 +28,23 @@ export default function ChatHistory() {
 
   const handleNewChat = async () => {
     try {
-      const res = await fetch('/chat/new', { method: 'POST' });
+      console.log(selectedBoard)
+      const res = await fetch('/api/chats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          boardId: selectedBoard,
+        }),
+      });
+      
       if (!res.ok) throw new Error('Failed to create new chat');
       const newChat = await res.json();
-      setChatSessions(prev => [newChat, ...prev]); // Prepend new chat to list
+      console.log(newChat)
+      setChatSessions(prev => [newChat, ...prev]);
+      setSelectedChat(newChat.id);
+      
     } catch (error) {
       console.error('New chat error:', error);
     }

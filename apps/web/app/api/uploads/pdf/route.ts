@@ -27,28 +27,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create uploads directory if not exists
     const uploadDir = path.join(process.cwd(), 'uploads');
     await fs.mkdir(uploadDir, { recursive: true });
 
-    // Save file locally
     const fileBuffer = await file.arrayBuffer();
     const fileName = `${nanoid()}-${file.name}`;
     const filePath = path.join(uploadDir, fileName);
     await fs.writeFile(filePath, Buffer.from(fileBuffer));
 
-    // Insert file metadata into the uploads table
     const fileId = nanoid();
     await db.insert(uploadsTable).values({
       id: fileId,
-      boardId: String(boardId),
+      boardId: boardId ? String(boardId) : null, // Explicit null handling
       chatId: String(chatId),
-      fileName: String(fileName),
-      fileUrl: String(filePath),
-      createdAt: new Date(), // Changed from toISOString()
+      fileName: file.name,
+      fileUrl: fileName,
+      createdAt: new Date(),
     });
 
-    // Process PDF and generate embeddings
     const loader = new PDFLoader(filePath);
     const docs = await loader.load();
 
@@ -56,23 +52,26 @@ export async function POST(req: NextRequest) {
       chunkSize: 1000,
       chunkOverlap: 200,
     });
+
     const chunks = await splitter.splitDocuments(docs);
 
     for (const chunk of chunks) {
       try {
-        // Generate embeddings for the chunk
         const embeds = await openai.embeddings.create({
           model: 'text-embedding-ada-002',
           input: chunk.pageContent,
         });
 
-        // Ensure the embedding data exists
         if (!embeds.data || !embeds.data[0]?.embedding) {
           console.error('Embedding generation failed for chunk:', chunk.pageContent);
-          continue; // Skip this chunk and proceed with the next
+          continue;
         }
 
-        // Prepare the vector for upsert
+        const pageNumber =
+          chunk.metadata?.loc?.pageNumber ??
+          chunk.metadata?.pageNumber ?? // fallback if using a custom loader
+          null;
+
         const vector = {
           id: nanoid(),
           values: embeds.data[0].embedding,
@@ -80,11 +79,12 @@ export async function POST(req: NextRequest) {
             boardId,
             chatId,
             fileId,
+            fileName,
+            pageNumber,
             content: chunk.pageContent,
           },
         };
 
-        // Upsert the vector into Pinecone
         await dbindex.upsert([vector]);
       } catch (error) {
         console.error('Error processing chunk:', chunk.pageContent, error);

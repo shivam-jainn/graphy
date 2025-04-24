@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { nanoid } from "nanoid";
+// Change nanoid import
+import { nanoid } from '@/lib/utils';  // Use project's existing nanoid utility
 import { db } from "@/lib/database/db";
 import { boardsTable } from "@/lib/database/schemas/board-schema";
 

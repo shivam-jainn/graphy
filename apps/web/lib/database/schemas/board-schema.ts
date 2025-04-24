@@ -9,7 +9,9 @@ export const boardsTable = pgTable("boards", {
 
 export const uploadsTable = pgTable("uploads", {
   id: varchar("id", { length: 191 }).primaryKey(),
-  boardId: varchar("board_id", { length: 191 }).references(() => boardsTable.id, { onDelete: "cascade" }),
+  boardId: varchar("board_id", { length: 191 })
+    .references(() => boardsTable.id, { onDelete: "cascade" }), // Removed .notNull()
+  chatId: varchar("chat_id", { length: 191 }),
   fileName: text("file_name").notNull(),
   fileUrl: text("file_url").notNull(),
   createdAt: timestamp("created_at").notNull(),
@@ -18,28 +20,33 @@ export const uploadsTable = pgTable("uploads", {
 export const chatHistoryTable = pgTable("chat_history", {
   id: varchar("id", { length: 191 }).primaryKey(),
   boardId: varchar("board_id", { length: 191 })
-    .references(() => boardsTable.id, { onDelete: "cascade" })
-    .notNull(),
+    .references(() => boardsTable.id, { onDelete: "cascade" }),  // Removed .notNull()
   title: text("title").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(), // Add timestamp config
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 });
 
 export const messagesTable = pgTable("messages", {
   id: varchar("id", { length: 191 }).primaryKey(),
-chatId: varchar("chat_id", { length: 191 }).references(() => chatHistoryTable.id, { onDelete: "cascade" }),
+  chatId: varchar("chat_id", { length: 191 })
+    .references(() => chatHistoryTable.id, { onDelete: "cascade" })
+    .notNull(),  // Added proper indentation and notNull
   content: text("content").notNull(),
-  role: varchar("role", { length: 50 }).notNull(), // 'user' or 'bot'
+  role: varchar("role", { length: 50 }).notNull(),
   createdAt: timestamp("created_at").notNull(),
 });
 
-// Many-to-many relationship for boards and chat sessions
+// Many-to-many relationship fix
 export const boardChatTable = pgTable(
   "board_chat",
   {
-    boardId: varchar("board_id", { length: 191 }).references(() => boardsTable.id, { onDelete: "cascade" }),
-    chatId: varchar("chat_id", { length: 191 }).references(() => chatHistoryTable.id, { onDelete: "cascade" }),
+    boardId: varchar("board_id", { length: 191 })
+      .references(() => boardsTable.id, { onDelete: "cascade" })
+      .notNull(),
+    chatId: varchar("chat_id", { length: 191 })
+      .references(() => chatHistoryTable.id, { onDelete: "cascade" })
+      .notNull(),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.boardId, table.chatId] }),
+    compositePk: primaryKey(table.boardId, table.chatId),
   })
 );

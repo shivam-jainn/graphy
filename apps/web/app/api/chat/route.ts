@@ -3,6 +3,9 @@ import { streamText, embed } from 'ai';
 import { dbindex } from '@/lib/database/db';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { nanoid } from '@/lib/utils';
+import { db } from '@/lib/database/db';
+import { chatHistoryTable } from '@/lib/database/schemas/board-schema';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -10,20 +13,26 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    // Parse request body
     const body = await req.json();
     console.log('Received request body:', JSON.stringify(body, null, 2));
 
     let { messages, chatId, boardID } = body;
 
-    // Ensure messages is an array (fixing the nested structure issue)
-    if (messages && typeof messages === 'object' && 'messages' in messages) {
-      messages = messages.messages; // Extract actual messages array
+    // Create new chat session if none exists
+    if (!chatId) {
+      const newChat = await db.insert(chatHistoryTable).values({
+        id: nanoid(),
+        title: 'New Chat',
+        createdAt: new Date(),
+      }).returning();
+      chatId = newChat[0].id;
     }
 
-    // Validate messages array
+    if (messages && typeof messages === 'object' && 'messages' in messages) {
+      messages = messages.messages;
+    }
+
     if (!Array.isArray(messages) || messages.length === 0) {
-      console.error('Invalid messages array:', messages);
       return NextResponse.json(
         { error: 'No valid messages provided.', received: messages },
         { status: 400 }
@@ -31,10 +40,7 @@ export async function POST(req: Request) {
     }
 
     const lastMessage = messages[messages.length - 1];
-
-    // Validate last message
     if (!lastMessage?.content) {
-      console.error('Last message is missing content:', lastMessage);
       return NextResponse.json(
         { error: 'Last message is missing content.', received: lastMessage },
         { status: 400 }
@@ -42,9 +48,9 @@ export async function POST(req: Request) {
     }
 
     let context = '';
+    let references: { fileName?: string; pageNumber?: number }[] = [];
 
-    // Fetch context using embedding if chatId is provided
-    if (chatId && lastMessage.content) {
+    if (chatId && lastMessage.content && boardID) {
       try {
         console.log('Generating embedding for:', lastMessage.content);
 
@@ -54,32 +60,55 @@ export async function POST(req: Request) {
         });
 
         const embedding = embeddingResponse.data[0]?.embedding;
-        if (!embedding) {
-          throw new Error('Failed to generate embedding.');
-        }
+        if (!embedding) throw new Error('Failed to generate embedding.');
 
+        const vector = {
+          id: nanoid(),
+          values: embedding, // Fix: Use embedding instead of embeds.data[0].embedding
+          metadata: {
+            boardId: boardID,
+            chatId,
+            // These variables need to be defined or removed if not needed
+            // fileId, 
+            // fileName,
+            // pageNumber,
+            content: lastMessage.content, // Fix: Use lastMessage.content instead of chunk.pageContent
+          },
+        };
+
+        // Filter condition update
         const queryResponse = await dbindex.query({
           vector: embedding,
           topK: 5,
           includeMetadata: true,
-          filter: { boardID: { $eq: boardID } },
+          filter: { boardId: { $eq: boardID } },  // Changed to match metadata key
         });
 
-        context = queryResponse.matches.length > 0
-          ? queryResponse.matches.map((match) => match.metadata.content).join('\n\n')
-          : '';
-
+        if (queryResponse.matches.length > 0) {
+          const matchesWithMetadata = queryResponse.matches.filter(
+            (match) => match.metadata !== undefined
+          );
+        
+          context = matchesWithMetadata
+            .map((match) => match.metadata!.content)
+            .join('\n\n');
+        
+          references = matchesWithMetadata.map((match) => ({
+            fileName: String(match.metadata!.fileName),
+            pageNumber: Number(match.metadata!.pageNumber),
+          }));
+        }
+        
+        
         console.log('Retrieved context:', context);
       } catch (error) {
         console.error('Error fetching embeddings or context:', error);
       }
     }
 
-    // Create the prompt
     const promptText = context ? `${context}\n\n${lastMessage.content}` : lastMessage.content;
     console.log('Final prompt for AI:', promptText);
 
-    // Generate response using Groq model
     const result = await streamText({
       model: groq('gemma2-9b-it'),
       prompt: promptText,
@@ -94,7 +123,13 @@ export async function POST(req: Request) {
     console.log('Token usage:', await result.usage);
     console.log('Finish reason:', await result.finishReason);
 
-    return result.toDataStreamResponse();
+    // Return formatted response compatible with useChat hook
+    return NextResponse.json({
+      id: nanoid(),
+      role: 'assistant',
+      content: streamedText,
+      createdAt: new Date(),
+    });
   } catch (error) {
     console.error('Error processing request:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
