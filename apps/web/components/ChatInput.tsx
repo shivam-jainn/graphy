@@ -5,15 +5,22 @@ import { Button } from "@workspace/ui/components/button";
 import { Badge } from "@workspace/ui/components/badge";
 import { Paperclip, FileText, ImageIcon, FileVideo, FileAudio, Search, MessageCircle, Send } from "lucide-react";
 
+import { selectedBoardAtom, selectedChatAtom } from '@/lib/atoms/board-atom';
+import { useAtom } from 'jotai';
+
 const allowedExtensions = [".pdf", ".docx"];
 
 interface ChatInputProps {
   input: string;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  isLoading?: boolean;  // Add this prop
 }
 
-export function ChatInput({ input, handleInputChange, handleSubmit }: ChatInputProps) {
+export function ChatInput({ input, handleInputChange, handleSubmit, isLoading }: ChatInputProps) {
+  const [selectedBoard] = useAtom(selectedBoardAtom);
+  const [selectedChat] = useAtom(selectedChatAtom);
+  console.log(selectedChat)
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -24,7 +31,7 @@ export function ChatInput({ input, handleInputChange, handleSubmit }: ChatInputP
   });
 
   // Remove duplicate useChat hook since we're getting these as props
-  
+
   const featButtons = [
     { key: 'search', icon: Search, label: 'Search' },
     { key: 'reason', icon: MessageCircle, label: 'Reason' }
@@ -36,49 +43,90 @@ export function ChatInput({ input, handleInputChange, handleSubmit }: ChatInputP
 
   const truncateFileName = (name: string) => {
     const maxLength = 10;
-    return name.length > maxLength 
+    return name.length > maxLength
       ? `${name.substring(0, maxLength)}...${name.split('.').pop()}`
       : name;
   };
 
-  const handleFileUpload = useCallback((files: FileList) => {
-    const validFiles = Array.from(files).filter(file => {
+  // Remove pendingFiles state, just use files
+  const handleFileUpload = useCallback(async (fileList: FileList) => {
+    const validFiles = Array.from(fileList).filter((file) => {
       const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
       return allowedExtensions.includes(ext);
     });
-    setFiles(prev => [...prev, ...validFiles]);
+    setFiles(prev => [...prev, ...validFiles]); // Update files directly
+    setShowAttachDropdown(false); // Close dropdown after selection
   }, []);
 
-  // Add click outside handler
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowAttachDropdown(false);
+  // Add loading state
+  const [isUploading, setIsUploading] = useState(false);
+
+  const uploadFiles = async () => {
+    setIsUploading(true);
+    const uploadedFiles = [];
+    try {
+      // Add null checks
+      if (!selectedChat) {
+        throw new Error('No active chat session');
       }
-    };
+      
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (selectedBoard) {
+          formData.append("boardId", String(selectedBoard));
+        }
+        formData.append("chatId", String(selectedChat));
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+        const response = await fetch("/api/uploads/pdf", {
+          method: "POST",
+          body: formData,
+        });
 
-  // Update onDrop to handle entire component
-  const handleDrop = (e: React.DragEvent) => {
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `Failed to upload ${file.name}`);
+        }
+        uploadedFiles.push(file);
+      }
+    } catch (error) {
+      console.error("Failed to upload file:", error);
+    } finally {
+      setIsUploading(false);
+      setFiles([]); // Clear files after attempts
+    }
+    return uploadedFiles.length > 0;
+  };
+
+  // Update the Send button in the return JSX
+  // Update form submit handler with better error handling
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files) {
-      handleFileUpload(e.dataTransfer.files);
+    try {
+      if (files.length > 0) {
+        await uploadFiles();
+      }
+      handleSubmit(e);
+    } catch (error) {
+      console.error("Form submission failed:", error);
+      // You might want to show an error toast or message to the user here
     }
   };
 
- 
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files) {
+      handleFileUpload(e.dataTransfer.files);
+    }
+  }, [handleFileUpload]);
 
   return (
-    <form 
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleSubmit(e);
-      }}
-      className="flex flex-col gap-3 w-full p-4 bg-white rounded-xl shadow-sm "
+    <form
+      onSubmit={handleFormSubmit}
+      className="flex flex-col gap-3 w-full p-4 bg-white rounded-xl shadow-sm border border-solid border-gray-300 "
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -91,28 +139,26 @@ export function ChatInput({ input, handleInputChange, handleSubmit }: ChatInputP
       onDrop={handleDrop}
     >
       {/* Message Box - update to remove individual drop handlers */}
-      <Input 
-  value={input}
-  onChange={handleInputChange}
-  className="w-full bg-transparent border-none outline-none resize-none text-left align-top shadow-none focus:ring-0 focus:outline-none focus:border-none hover:border-none"
-  placeholder="Type your message..."
-/>
+      <Input
+        value={input}
+        onChange={handleInputChange}
+        className="w-full bg-transparent border-none outline-none resize-none text-left align-top shadow-none focus:ring-0 focus:outline-none focus:border-none hover:border-none focus-visible:ring-0 focus-visible:outline-none"
+        placeholder="Type your message..."
+      />
 
-      {/* Files Tags */}
+      {/* Files Tags - now showing the correct files state */}
       {files.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {files.map((file, index) => {
-            const Icon = file.type.startsWith('image/') ? ImageIcon :
-                        file.type.startsWith('video/') ? FileVideo :
-                        file.type.startsWith('audio/') ? FileAudio : FileText;
-            
-            return (
-              <Badge key={index} variant="outline" className="gap-2 py-1 px-3 bg-blue-50 border-blue-200">
-                <Icon className="w-4 h-4 text-blue-600" />
-                <span className="text-blue-800">{truncateFileName(file.name)}</span>
-              </Badge>
-            )}
-          )}
+          {files.map((file, index) => (
+            <Badge
+              key={index}
+              variant="outline"
+              className="gap-2 py-1 px-3 bg-blue-50 border-blue-200"
+            >
+              <FileText className="w-4 h-4 text-blue-600" />
+              <span className="text-blue-800">{truncateFileName(file.name)}</span>
+            </Badge>
+          ))}
         </div>
       )}
 
@@ -121,13 +167,13 @@ export function ChatInput({ input, handleInputChange, handleSubmit }: ChatInputP
         <div className="flex items-center gap-2">
           {/* Attachments Dropdown */}
           <div className="relative" ref={dropdownRef}>
-            <button 
+            <button
               onClick={() => setShowAttachDropdown(!showAttachDropdown)}
               className="p-2 hover:bg-gray-100 rounded-lg"
             >
               <Paperclip className="w-5 h-5 text-gray-600" />
             </button>
-            
+
             {showAttachDropdown && (
               <div className="absolute left-0 bottom-full mb-2 w-48 bg-white shadow-lg rounded-md border z-10">
                 <label className="flex px-4 py-2 hover:bg-gray-100 cursor-pointer">
@@ -157,25 +203,31 @@ export function ChatInput({ input, handleInputChange, handleSubmit }: ChatInputP
           {featButtons.map(({ key, icon: Icon, label }) => (
             <Button
               key={key}
+              type="button"
               variant={activeFeatures[key] ? 'default' : 'ghost'}
-              className={`gap-2 rounded-lg ${
-                activeFeatures[key] ? 'bg-blue-100 text-blue-600 hover:bg-blue-100' : 'hover:bg-gray-100'
-              }`}
+              className={`gap-2 rounded-lg ${activeFeatures[key] ? 'bg-blue-100 text-blue-600 hover:bg-blue-100' : 'hover:bg-gray-100'
+                }`}
               onClick={() => toggleFeature(key)}
             >
               <Icon className="w-4 h-4" />
               {label}
             </Button>
+
           ))}
         </div>
 
         {/* Update Send Button */}
         <Button
           type="submit"
-          variant="default" 
+          variant="default"
           className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10"
+          disabled={isUploading || isLoading}
         >
-          <Send className="w-5 h-5" />
+          {isUploading || isLoading ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Send className="w-5 h-5" />
+          )}
         </Button>
       </div>
 
