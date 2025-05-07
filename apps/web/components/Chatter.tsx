@@ -28,15 +28,9 @@ export default function Chatter() {
       boardID: selectedBoard || 'active-board-id'
     },
     onResponse: async (response) => {
-      // This callback is triggered when a response is received from the API
-      console.log("Response received:", response);
       if (response.status === 200) {
         try {
           const responseData = await response.json();
-          // If the API response contains messages, update the messages state
-          console.log("Response data:", responseData);
-
-          console.log("Final Messages:", [...messages, responseData]);
           setMessages(prevMessages => [...prevMessages, responseData]);
         } catch (error) {
           console.error("Failed to process API response:", error);
@@ -44,11 +38,6 @@ export default function Chatter() {
       }
     }
   });
-
-  // Debug logs
-  useEffect(() => {
-    console.log("Current messages:", messages);
-  }, [messages]);
 
   return (
     <div className="flex flex-col h-screen w-full">
