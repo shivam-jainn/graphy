@@ -35,8 +35,9 @@ export default function Chatter() {
           const responseData = await response.json();
           // If the API response contains messages, update the messages state
           console.log("Response data:", responseData);
+
           console.log("Final Messages:", [...messages, responseData]);
-          setMessages([...messages, responseData]);
+          setMessages(prevMessages => [...prevMessages, responseData]);
         } catch (error) {
           console.error("Failed to process API response:", error);
         }
