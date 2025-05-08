@@ -104,13 +104,18 @@ export function ChatInput({ input, handleInputChange, handleSubmit, isLoading }:
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      let uploadSuccess = false;
       if (files.length > 0) {
-        await uploadFiles();
+        uploadSuccess = await uploadFiles();
       }
-      handleSubmit(e);
+      
+      // Only proceed with chat submission if either there were no files
+      // or the upload was successful
+      if (!files.length || uploadSuccess) {
+        handleSubmit(e);
+      }
     } catch (error) {
       console.error("Form submission failed:", error);
-      // You might want to show an error toast or message to the user here
     }
   };
 

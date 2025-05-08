@@ -62,20 +62,6 @@ export async function POST(req: Request) {
         const embedding = embeddingResponse.data[0]?.embedding;
         if (!embedding) throw new Error('Failed to generate embedding.');
 
-        const vector = {
-          id: nanoid(),
-          values: embedding, // Fix: Use embedding instead of embeds.data[0].embedding
-          metadata: {
-            boardId: boardID,
-            chatId,
-            // These variables need to be defined or removed if not needed
-            // fileId, 
-            // fileName,
-            // pageNumber,
-            content: lastMessage.content, // Fix: Use lastMessage.content instead of chunk.pageContent
-          },
-        };
-
         // Filter condition update
         const queryResponse = await dbindex.query({
           vector: embedding,
